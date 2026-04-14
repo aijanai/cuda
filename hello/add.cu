@@ -1,7 +1,8 @@
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
 
 #include <stdio.h>
+#include <cuda.h>
 
 
 __global__ void add(int* a, int* b, int* c, int n){
@@ -18,7 +19,7 @@ void printArray(int* a, int n){
 
 int main(){
     int n=1024;
-    int blocks=4;
+    int blocks=1;
     int threads_per_block=n/blocks;
 
     int SIZE=n*sizeof(int);
@@ -51,8 +52,13 @@ int main(){
     cudaMemcpy(ga, a, SIZE, cudaMemcpyHostToDevice);
     cudaMemcpy(gb, b, SIZE, cudaMemcpyHostToDevice);
     
+    cudaEvent_t start,stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
     // exec kernel
+    cudaEventRecord(start);
     add<<<blocks, threads_per_block>>>(ga,gb,gc,n);
+    cudaEventRecord(stop);
 
     // wait for finish
     cudaError_t err = cudaDeviceSynchronize();
@@ -63,6 +69,10 @@ int main(){
    
     // copy from GPU to CPU
     cudaMemcpy(c, gc, SIZE, cudaMemcpyDeviceToHost);
+    cudaEventSynchronize(stop);
+    float millisec=0;
+    cudaEventElapsedTime(&millisec, start, stop);
+    printf("Took %f ms\n", millisec);
 
     printf("c: \n");
     printArray(c,n);
