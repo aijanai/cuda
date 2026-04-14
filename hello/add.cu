@@ -49,8 +49,10 @@ int main(){
     cudaMemcpy(ga, a, SIZE, cudaMemcpyHostToDevice);
     cudaMemcpy(gb, b, SIZE, cudaMemcpyHostToDevice);
     
+    // exec kernel
     add<<<1, n>>>(ga,gb,gc,n);
 
+    // wait for finish
     cudaError_t err = cudaDeviceSynchronize();
     if (err != cudaSuccess){
         printf("CUDA error: %s\n", cudaGetErrorString(err));
