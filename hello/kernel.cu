@@ -5,7 +5,7 @@
 
 
 __global__ void test01(){
-    printf("Block ID %d, Thread ID %d\n", blockIdx.x, threadIdx.x);
+    printf("Block ID %d, Thread ID %d, Warp ID %d\n", blockIdx.x, threadIdx.x, threadIdx.x/32);
 }
 
 int main(){
