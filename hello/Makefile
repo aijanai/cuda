@@ -1,13 +1,21 @@
 CC=nvcc
 OPTS=-arch=native -ccbin=clang++ -Xcompiler -Wall -g #-O0
 
-all: hello add
+TARGETS= hello add cpu_add
+
+all: ${TARGETS}
 
 clean:
-	rm -f *.o hello *asm main add
+	rm -f *.o *asm main ${TARGETS}
 
 hello: hello.cu
-	$(CC) $(OPTS) hello.cu -o hello
+	$(CC) $(OPTS) $< -o $@
 
-add: add.cu
-	$(CC) $(OPTS) add.cu -o add
+add: add.cu funcs.o funcs.h
+	$(CC) $(OPTS) -DPRINT=1 $< $(word 2, $^) -o $@
+
+funcs.o: funcs.cu funcs.h
+	$(CC) $(OPTS) -c $< -o $@
+
+cpu_add: cpu_add.cu funcs.o funcs.h
+	$(CC) $(OPTS) -DPRINT=1 $< $(word 2, $^) -o $@
