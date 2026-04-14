@@ -1,7 +1,7 @@
 CC=nvcc
 OPTS=-arch=native -ccbin=clang++ -Xcompiler -Wall -g #-DEBUG=1
 
-TARGETS= hello add cpu_add
+TARGETS= hello add cpu_add properties
 
 all: ${TARGETS}
 
@@ -9,6 +9,9 @@ clean:
 	rm -f *.o *asm main ${TARGETS}
 
 hello: hello.cu
+	$(CC) $(OPTS) $< -o $@
+
+properties: properties.cu
 	$(CC) $(OPTS) $< -o $@
 
 add: add.cu funcs.o funcs.h
