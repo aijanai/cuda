@@ -1,5 +1,5 @@
 CC=nvcc
-OPTS=-arch=native -ccbin=clang++ -Xcompiler -Wall -g #-O0
+OPTS=-arch=native -ccbin=clang++ -Xcompiler -Wall -g #-DEBUG=1
 
 TARGETS= hello add cpu_add
 
@@ -12,10 +12,10 @@ hello: hello.cu
 	$(CC) $(OPTS) $< -o $@
 
 add: add.cu funcs.o funcs.h
-	$(CC) $(OPTS) -DPRINT=1 $< $(word 2, $^) -o $@
+	$(CC) $(OPTS) $< $(word 2, $^) -o $@
 
 funcs.o: funcs.cu funcs.h
 	$(CC) $(OPTS) -c $< -o $@
 
 cpu_add: cpu_add.cu funcs.o funcs.h
-	$(CC) $(OPTS) -DPRINT=1 $< $(word 2, $^) -o $@
+	$(CC) $(OPTS) $< $(word 2, $^) -o $@

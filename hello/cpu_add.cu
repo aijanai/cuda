@@ -17,7 +17,7 @@ int main(){
     int SIZE=n*sizeof(int);
 
     int *a, *b, *c;
-    int *ga, *gb, *gc;
+    //int *ga, *gb, *gc;
 
     // alloc on CPU
     a = (int*) malloc(SIZE);
@@ -38,13 +38,13 @@ int main(){
     #endif
 
     // alloc on GPU
-    cudaMalloc((void**) &ga, SIZE);
-    cudaMalloc((void**) &gb, SIZE);
-    cudaMalloc((void**) &gc, SIZE);
+    //cudaMalloc((void**) &ga, SIZE);
+    //cudaMalloc((void**) &gb, SIZE);
+    //cudaMalloc((void**) &gc, SIZE);
 
     // copy from CPU to GPU
-    cudaMemcpy(ga, a, SIZE, cudaMemcpyHostToDevice);
-    cudaMemcpy(gb, b, SIZE, cudaMemcpyHostToDevice);
+    //cudaMemcpy(ga, a, SIZE, cudaMemcpyHostToDevice);
+    //cudaMemcpy(gb, b, SIZE, cudaMemcpyHostToDevice);
     
     cudaEvent_t start,stop;
     cudaEventCreate(&start);
@@ -64,7 +64,7 @@ int main(){
     }
    
     // copy from GPU to CPU
-    cudaMemcpy(c, gc, SIZE, cudaMemcpyDeviceToHost);
+    //cudaMemcpy(c, gc, SIZE, cudaMemcpyDeviceToHost);
     cudaEventSynchronize(stop);
     float millisec=0;
     cudaEventElapsedTime(&millisec, start, stop);
@@ -75,9 +75,9 @@ int main(){
     printArray(c,n);
     #endif
 
-    cudaFree(ga);
-    cudaFree(gb);
-    cudaFree(gc);
+    //cudaFree(ga);
+    //cudaFree(gb);
+    //cudaFree(gc);
     free(a);
     free(b);
     free(c);
