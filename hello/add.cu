@@ -5,7 +5,7 @@
 
 
 __global__ void add(int* a, int* b, int* c, int n){
-    int i=threadIdx.x;
+    int i=threadIdx.x+blockIdx.x*blockDim.x;
     c[i]=a[i]+b[i];
 }
 
@@ -18,6 +18,8 @@ void printArray(int* a, int n){
 
 int main(){
     int n=1024;
+    int blocks=4;
+    int threads_per_block=n/blocks;
 
     int SIZE=n*sizeof(int);
 
@@ -50,12 +52,13 @@ int main(){
     cudaMemcpy(gb, b, SIZE, cudaMemcpyHostToDevice);
     
     // exec kernel
-    add<<<1, n>>>(ga,gb,gc,n);
+    add<<<blocks, threads_per_block>>>(ga,gb,gc,n);
 
     // wait for finish
     cudaError_t err = cudaDeviceSynchronize();
     if (err != cudaSuccess){
         printf("CUDA error: %s\n", cudaGetErrorString(err));
+        return -1;
     }
    
     // copy from GPU to CPU
