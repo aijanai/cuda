@@ -1,11 +1,13 @@
-
 CC=nvcc
-OPTS=-arch=native #-Wall -std=c++17 -g -O0
+OPTS=-arch=native -ccbin=clang++ -Xcompiler -Wall -g #-O0
 
-all: main
+all: hello add
 
 clean:
-	rm -f *.o hello *asm main
+	rm -f *.o hello *asm main add
 
-main: kernel.cu
-	$(CC) $(OPTS) kernel.cu -o main
+hello: hello.cu
+	$(CC) $(OPTS) hello.cu -o hello
+
+add: add.cu
+	$(CC) $(OPTS) add.cu -o add

@@ -9,7 +9,7 @@ __global__ void test01(){
 }
 
 int main(){
-    test01 <<<4, 1024>>>();
+    test01 <<<2, 64>>>();
 
     cudaError_t err = cudaDeviceSynchronize();
     if (err != cudaSuccess){
