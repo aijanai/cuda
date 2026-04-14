@@ -11,9 +11,6 @@ clean:
 hello: hello.cu
 	$(CC) $(OPTS) $< -o $@
 
-properties: properties.cu
-	$(CC) $(OPTS) $< -o $@
-
 add: add.cu funcs.o funcs.h
 	$(CC) $(OPTS) $< $(word 2, $^) -o $@
 
