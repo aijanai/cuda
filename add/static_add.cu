@@ -1,7 +1,17 @@
+#include <cuda_runtime.h>
+#include <device_launch_parameters.h>
+
+#include <stdio.h>
 #include <cuda.h>
 #include <cassert>
-#include "funcs.h"
 
+
+__global__ void add(int* a, int* b, int* c, int n){
+    int i=threadIdx.x+blockIdx.x*blockDim.x;
+    if(i<n){
+        c[i]=a[i]+b[i];
+    }
+}
 
 void printArray(int* a, int n){
     for(int i=0; i<n; i++){
@@ -11,7 +21,7 @@ void printArray(int* a, int n){
 }
 
 int main(){
-    unsigned long n=1024*400*1024;
+    unsigned long n=1024*1024*400;
     int threads_per_block=1024;
     unsigned long blocks=(n+threads_per_block-1)/threads_per_block;
 
@@ -39,14 +49,6 @@ int main(){
     #endif
 
     cudaError_t err;
-    cudaEvent_t start,stop, func_start, func_stop, mem_copied;
-    cudaEventCreate(&start);
-    cudaEventCreate(&stop);
-    cudaEventCreate(&func_start);
-    cudaEventCreate(&func_stop);
-    cudaEventCreate(&mem_copied);
-
-    cudaEventRecord(start);
     // alloc on GPU
     err=cudaMalloc((void**) &ga, SIZE);
     if (err != cudaSuccess){
@@ -65,7 +67,6 @@ int main(){
     }
 
     // copy from CPU to GPU
-    cudaEventRecord(mem_copied);
     err=cudaMemcpy(ga, a, SIZE, cudaMemcpyHostToDevice);
     if (err != cudaSuccess){
         printf("CUDA error: ga memcpy %s\n", cudaGetErrorString(err));
@@ -77,15 +78,18 @@ int main(){
         return -1;
     }
     
-    cudaEventRecord(func_start);
+    cudaEvent_t start,stop;
+    cudaEventCreate(&start);
+    cudaEventCreate(&stop);
     // exec kernel
-    add<<<blocks, threads_per_block>>>(ga,gb,gc, n);
-    cudaEventRecord(func_stop);
+    cudaEventRecord(start);
+    add<<<blocks, threads_per_block>>>(ga,gb,gc,n);
+    cudaEventRecord(stop);
 
     // wait for finish
     err = cudaDeviceSynchronize();
     if (err != cudaSuccess){
-        printf("CUDA error: dev sync %s\n", cudaGetErrorString(err));
+        printf("CUDA error: %s\n", cudaGetErrorString(err));
         return -1;
     }
    
@@ -96,19 +100,16 @@ int main(){
         return -1;
     }
 
-    cudaEventRecord(stop);
     cudaEventSynchronize(stop);
     for(int i=0; i<n; i++){
         assert(c[i]==a[i]+b[i]);
+        if (i>0){
+            assert(c[i]==c[i-1]);
+        }
     }
-
-    float overall_exec, func_exec, cuda_malloc, mem_copy, mem_copy_back;
-    cudaEventElapsedTime(&overall_exec, start, stop);
-    cudaEventElapsedTime(&cuda_malloc, start, mem_copied);
-    cudaEventElapsedTime(&mem_copy, mem_copied, func_start);
-    cudaEventElapsedTime(&func_exec, func_start, func_stop);
-    cudaEventElapsedTime(&mem_copy_back, func_stop, stop);
-    printf("Took %f ms (cuda malloc %f ms -> mem copy %f ms -> func exec %f ms -> mem copy back %f ms)\n", overall_exec, cuda_malloc, mem_copy, func_exec, mem_copy_back);
+    float millisec=0;
+    cudaEventElapsedTime(&millisec, start, stop);
+    printf("Took %f ms\n", millisec);
 
     #ifdef DEBUG
     printf("c: \n");

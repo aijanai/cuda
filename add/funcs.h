@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 
-__global__ void add(int* a, int* b, int* c);
+__global__ void add(int* a, int* b, int* c, int n);
 
 __host__ __device__ void add_impl(int* a, int* b, int* c, int i);
 

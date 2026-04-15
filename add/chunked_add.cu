@@ -1,5 +1,6 @@
 #include <cuda.h>
 #include "funcs.h"
+#include <cassert>
 
 
 void printArray(int* a, int n){
@@ -10,7 +11,7 @@ void printArray(int* a, int n){
 }
 
 int main(){
-    unsigned long long n=10000000000;
+    unsigned long long n=5000000000;
     unsigned long chunk_size=1024*1024*256;
 
 
@@ -37,9 +38,13 @@ int main(){
     float overall_exec, func_exec, cuda_malloc, mem_copy, mem_copy_back;
     cudaError_t err;
     
+    unsigned long processed=0;
     for(unsigned long offset=0; offset<n; offset+=chunk_size){
 
-        printf("Offset: %lu\n", offset);
+        if (offset+chunk_size> n){
+            chunk_size=n-offset;
+        }
+        printf("Offset: %lu, chunk size: %lu, processed: %lu\n", offset, chunk_size, processed);
     
         // fill in numbers
         for(int i=0; i<chunk_size; i++){
@@ -68,7 +73,7 @@ int main(){
 
         cudaEventRecord(func_start);
         // exec kernel
-        add<<<blocks, threads_per_block>>>(ga,gb,gc);
+        add<<<blocks, threads_per_block>>>(ga,gb,gc, chunk_size);
         cudaEventRecord(func_stop);
 
         // wait for finish
@@ -94,6 +99,10 @@ int main(){
         printArray(c,n);
         #endif
     
+        for(int i=0; i<chunk_size; i++){
+            assert(c[i]==a[i]+b[i]);
+        }
+        processed+=chunk_size;
     }
 
     cudaFree(ga);
