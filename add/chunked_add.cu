@@ -11,8 +11,8 @@ void printArray(int* a, int n){
 }
 
 int main(){
-    unsigned long long n=5000000000;
-    unsigned long chunk_size=1024*1024*256;
+    unsigned long long n=5*1024*1024*1024LL;
+    unsigned long chunk_size=1024LL*1024*256;
 
 
     int threads_per_block=1024;

@@ -25,6 +25,7 @@ int main(){
  
         printf("Warps/SM: %d\n", prop.maxThreadsPerMultiProcessor/32);
         printf("Threads/Block: %d\n", prop.maxThreadsPerBlock);
+        printf("Warp/Block: %d\n", prop.maxThreadsPerBlock/32);
         printf("Shared mem/Block: %luKB\n", prop.sharedMemPerBlock/1024);
         printf("Total Memory: %luGB\n", prop.totalGlobalMem/(1024*1024*1024));
         printf("Capability: %d.%d\n", prop.major, prop.minor);

@@ -11,7 +11,7 @@ void printArray(int* a, int n){
 }
 
 int main(){
-    unsigned long n=1024*400*1024;
+    unsigned long n=1024LL*1024*400;
     int threads_per_block=1024;
     unsigned long blocks=(n+threads_per_block-1)/threads_per_block;
 
@@ -39,12 +39,13 @@ int main(){
     #endif
 
     cudaError_t err;
-    cudaEvent_t start,stop, func_start, func_stop, mem_copied;
+    cudaEvent_t start,stop, func_start, func_stop, mem_copied, check;
     cudaEventCreate(&start);
     cudaEventCreate(&stop);
     cudaEventCreate(&func_start);
     cudaEventCreate(&func_stop);
     cudaEventCreate(&mem_copied);
+    cudaEventCreate(&check);
 
     cudaEventRecord(start);
     // alloc on GPU
@@ -99,7 +100,10 @@ int main(){
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
     for(int i=0; i<n; i++){
-        assert(c[i]==a[i]+b[i]);
+        if(c[i]!=a[i]+b[i]){
+            printf("%d != %d + %d\n", c[i], a[i], b[i]);
+            assert(c[i]==a[i]+b[i]);
+        }
     }
 
     float overall_exec, func_exec, cuda_malloc, mem_copy, mem_copy_back;

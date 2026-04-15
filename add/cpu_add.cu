@@ -1,4 +1,5 @@
 #include <cuda.h>
+#include <cassert>
 #include "funcs.h"
 
 
@@ -68,13 +69,19 @@ int main(){
     cudaEventSynchronize(stop);
     float millisec=0;
     cudaEventElapsedTime(&millisec, start, stop);
-    printf("Took %f ms\n", millisec);
+    printf("Took %f ms (func exec only) \n", millisec);
     
     #ifdef DEBUG
     printf("c: \n");
     printArray(c,n);
     #endif
 
+    for(int i=0; i<n; i++){
+        if(c[i]!=a[i]+b[i]){
+            printf("%d != %d + %d\n", c[i], a[i], b[i]);
+            assert(c[i]==a[i]+b[i]);
+        }
+    }
     //cudaFree(ga);
     //cudaFree(gb);
     //cudaFree(gc);
