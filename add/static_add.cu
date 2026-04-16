@@ -13,13 +13,6 @@ __global__ void add(int* a, int* b, int* c, int n){
     }
 }
 
-void printArray(int* a, int n){
-    for(int i=0; i<n; i++){
-        printf("%d ",a[i]);
-    }
-    printf("\n");
-}
-
 int main(){
     unsigned long n=1024*1024*400;
     int threads_per_block=1024;
@@ -125,4 +118,11 @@ int main(){
 
     cudaDeviceReset();
     return 0;
+}
+
+void printArray(int* a, int n){
+    for(int i=0; i<n; i++){
+        printf("%d ",a[i]);
+    }
+    printf("\n");
 }

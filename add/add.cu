@@ -10,9 +10,14 @@ void printArray(int* a, int n){
     printf("\n");
 }
 
-int main(){
+int main(int argc, char** argv){
+
+    if(argc<2){
+        printf("Usage: %s <blocks>\n", argv[0]);
+        return -2;
+    }
     unsigned long n=1024LL*1024*400;
-    int threads_per_block=1024;
+    int threads_per_block=atoi(argv[1]);
     unsigned long blocks=(n+threads_per_block-1)/threads_per_block;
 
     int SIZE=n*sizeof(int);
