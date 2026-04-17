@@ -9,11 +9,13 @@ int main(int argc, char** argv){
         printf("Usage: %s <blocks>\n", argv[0]);
         return -2;
     }
-    unsigned long n=1024LL*1024*400;
-    int threads_per_block=atoi(argv[1]);
-    unsigned long blocks=(n+threads_per_block-1)/threads_per_block;
+    unsigned int n=atoi(argv[1]);
+    unsigned int m=atoi(argv[1]);
+    printf("(%d x %d)\n", n,m);
+    dim3 block_dim(32,32);
+    dim3 grid_dim((n+block_dim.x-1)/block_dim.x,(m+block_dim.y-1)/block_dim.y);
 
-    size_t SIZE=n*sizeof(int);
+    size_t SIZE=n*m*sizeof(int);
 
     int *a, *b, *c;
     int *ga, *gb, *gc;
@@ -23,17 +25,23 @@ int main(int argc, char** argv){
     b = (int*) malloc(SIZE);
     c = (int*) malloc(SIZE);
 
+    printf("malloc ok\n");
     // fill in numbers
+    int k;
     for(int i=0; i<n; i++){
-        a[i]=i;
-        b[i]=n-i;
+        for(int j=0; j<m; j++){
+            k=j+n*i;
+            a[k]=k;
+            b[k]=n*m-k;
+        }
     }
+    printf("fill ok\n");
 
     #ifdef DEBUG
     printf("a: \n");
-    printArray(a,n);
+    printMatrix(a,n,m);
     printf("b: \n");
-    printArray(b,n);
+    printMatrix(b,n,m);
     #endif
 
     cudaError_t err;
@@ -63,6 +71,7 @@ int main(int argc, char** argv){
         return -1;
     }
 
+    printf("cuda malloc ok\n");
     // copy from CPU to GPU
     cudaEventRecord(mem_copied);
     err=cudaMemcpy(ga, a, SIZE, cudaMemcpyHostToDevice);
@@ -78,7 +87,7 @@ int main(int argc, char** argv){
     
     cudaEventRecord(func_start);
     // exec kernel
-    add<<<blocks, threads_per_block>>>(ga,gb,gc, n);
+    add2d<<<grid_dim, block_dim>>>(ga,gb,gc, n,m);
     cudaEventRecord(func_stop);
 
     // wait for finish
@@ -98,9 +107,12 @@ int main(int argc, char** argv){
     cudaEventRecord(stop);
     cudaEventSynchronize(stop);
     for(int i=0; i<n; i++){
-        if(c[i]!=a[i]+b[i]){
-            printf("%d != %d + %d\n", c[i], a[i], b[i]);
-            assert(c[i]==a[i]+b[i]);
+        for(int j=0; j<m; j++){
+            k=j+n*i;
+            if(c[k]!=a[k]+b[k]){
+                printf("%d != %d + %d\n", c[k], a[k], b[k]);
+                assert(c[k]==a[k]+b[k]);
+            }
         }
     }
 
@@ -114,7 +126,7 @@ int main(int argc, char** argv){
 
     #ifdef DEBUG
     printf("c: \n");
-    printArray(c,n);
+    printMatrix(c,n,m);
     #endif
 
     cudaFree(ga);
