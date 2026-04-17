@@ -5,14 +5,16 @@
 
 int main(int argc, char** argv){
 
-    if(argc<2){
-        printf("Usage: %s <blocks>\n", argv[0]);
+    if(argc<3){
+        printf("Usage: %s <matrix radix size (N)> <threads radix size>\n", argv[0]);
         return -2;
     }
     unsigned int n=atoi(argv[1]);
     unsigned int m=atoi(argv[1]);
-    printf("(%d x %d)\n", n,m);
-    dim3 block_dim(32,32);
+    printf("Matrix is (%d x %d)\n", n,m);
+    unsigned int block_size=atoi(argv[2]);
+    printf("Block (threads) is (%d x %d)\n", block_size, block_size);
+    dim3 block_dim(block_size,block_size);
     dim3 grid_dim((n+block_dim.x-1)/block_dim.x,(m+block_dim.y-1)/block_dim.y);
 
     size_t SIZE=n*m*sizeof(int);
