@@ -163,11 +163,11 @@ int main(int argc, char** argv){
     printf("Took %f ms (cuda malloc %f ms -> mem copy %f ms -> func exec %f ms -> mem copy back %f ms)\n", overall_exec, cuda_malloc, mem_copy, func_exec, mem_copy_back);
 
     cudaFree(ga);
-    free(a);
-    free(b);
+    delete a;
+    delete b;
     #ifdef DEBUG
     if(DEBUG>1){
-        free(c);
+        delete c;
     }
     #endif
 
