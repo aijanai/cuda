@@ -8,6 +8,7 @@ A collection of CUDA C++ examples exploring GPU programming concepts, from basic
 cuda/
 ├── hello/        # Basic kernel: block, thread, and warp identification
 ├── add/          # Vector addition with GPU/CPU comparison and profiling
+├── reduce/       # Parallel reduction with templated kernel and CUDA event profiling
 └── properties/   # Query and print GPU device properties
 ```
 
@@ -34,6 +35,22 @@ The implementation is split into:
 cd add && make
 ./add        # GPU version
 ./cpu_add    # CPU version
+```
+
+### reduce
+
+Parallel reduction summing an array of `unsigned long` on the GPU. Uses a templated `__global__` kernel (`kernel.cuh`) that performs a tree-based reduction within each block using shared memory strides. Multiple kernel launches iteratively reduce partial sums until a single result remains.
+
+Key features:
+- Templated kernel and format helpers (`fmt<T>`, `fmtKernelInProgressMsg<T>`) — all defined in `funcs.h` for header-only instantiation
+- Multi-pass reduction loop driven from the host
+- CUDA event profiling broken down by stage (malloc, H→D copy, kernel, D→H copy)
+- Optional verbose debug output controlled by `-DDEBUG=<level>`
+
+```bash
+cd reduce && make
+./reduce <array_len> <block_size>
+# e.g. ./reduce 1048576 256
 ```
 
 ### properties
