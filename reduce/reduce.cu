@@ -26,7 +26,7 @@ int main(int argc, char** argv){
     b = new unsigned long[n];
     #ifdef DEBUG
     unsigned long *c;
-    if(DEBUG>1){
+    if(DEBUG>0){
        c = new unsigned long[n];
     }
     #endif
@@ -72,44 +72,35 @@ int main(int argc, char** argv){
 
     cudaEventRecord(func_start);
     // exec kernel
-    reduce<unsigned long><<<blocks, threads_per_block>>>(ga, n);
-
-    // wait for finish
-    err = cudaDeviceSynchronize();
-    if (err != cudaSuccess){
-        printf("CUDA error: dev sync %s\n", cudaGetErrorString(err));
-        return -1;
-    }
-   
-    #ifdef DEBUG
-    if(DEBUG>1){
-        // copy partials
-        err=cudaMemcpy(c, ga, n, cudaMemcpyDeviceToHost);
-        if (err != cudaSuccess){
-            printf("CUDA error: gc memcpy %s\n", cudaGetErrorString(err));
-            return -1;
-        }
-
-        printf("partial sums:\n");
-        printArray<unsigned long>(c,n);
-    }
-    #endif
 
     int reduced_n=n;
     int reduced_blocks=blocks;
     if(blocks>1){
-        do{
+        while(true){
             // kernel N
-            reduced_n=reduced_blocks;
-            reduced_blocks=(reduced_blocks-1+threads_per_block)/threads_per_block;
-
             printf("\n");
             #ifdef DEBUG
-            if(DEBUG>1){
-                printf("sum of first %d nums: %lu\n",reduced_n,sumArrayLinear<unsigned long>(c,reduced_n));
+            if(DEBUG>0){
+                // copy partials
+                err=cudaMemcpy(c, ga, reduced_n*sizeof(unsigned long), cudaMemcpyDeviceToHost);
+                if (err != cudaSuccess){
+                    printf("CUDA error: gc memcpy %s\n", cudaGetErrorString(err));
+                    return -1;
+                }
+
+                if(DEBUG>1){
+                    printf("partial sums:\n");
+                    printArray<unsigned long>(c,n);
+                }
             }
             #endif
             
+            #ifdef DEBUG
+            if(DEBUG>0){
+                printf("sum of first %d nums: %lu\n",reduced_n,sumArrayLinear<unsigned long>(c,reduced_n));
+            }
+            #endif
+
             printf("re-running over reduced length %d with reduced blocks: %d\n", reduced_n, reduced_blocks);
  
             // exec kernel N
@@ -120,7 +111,13 @@ int main(int argc, char** argv){
                 printf("CUDA error: dev sync %s\n", cudaGetErrorString(err));
                 return -1;
             }
-        }while(reduced_blocks!=1);
+            if(reduced_blocks==1){
+                break;
+            }
+            reduced_n=reduced_blocks;
+            reduced_blocks=(reduced_n-1+threads_per_block)/threads_per_block;
+
+        }
     }
 
     // wait for finish
@@ -166,7 +163,7 @@ int main(int argc, char** argv){
     delete a;
     delete b;
     #ifdef DEBUG
-    if(DEBUG>1){
+    if(DEBUG>0){
         delete c;
     }
     #endif
