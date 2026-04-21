@@ -3,6 +3,9 @@
 #include "funcs.h"
 #include "kernel.cuh"
 
+unsigned long computeNumBlocks(unsigned long n, unsigned int threads_per_block){
+    return (n+threads_per_block-1)/threads_per_block;
+}
 
 int main(int argc, char** argv){
 
@@ -12,7 +15,7 @@ int main(int argc, char** argv){
     }
     unsigned long n=atol(argv[1]); // n
     unsigned int threads_per_block=atoi(argv[2]); // blocksize
-    unsigned long blocks=(n+threads_per_block-1)/threads_per_block; //grisize
+    unsigned long blocks=computeNumBlocks(n,threads_per_block); //grisize
 
     printf("array len is %lu, block size is %d, grid size is %lu\n", n, threads_per_block, blocks);
 
@@ -33,7 +36,7 @@ int main(int argc, char** argv){
 
     // fill in numbers
     for(unsigned long i=0; i<n; i++){
-        a[i]=i;
+        a[i]=1;
         b[i]=a[i];
     }
 
@@ -104,7 +107,7 @@ int main(int argc, char** argv){
             printf("re-running over reduced length %d with reduced blocks: %d\n", reduced_n, reduced_blocks);
  
             // exec kernel N
-            reduce<unsigned long><<<reduced_blocks, threads_per_block>>>(ga, reduced_n);
+            reduce<unsigned long, 256><<<reduced_blocks, threads_per_block>>>(ga, reduced_n);
 
             err = cudaDeviceSynchronize();
             if (err != cudaSuccess){
@@ -115,7 +118,7 @@ int main(int argc, char** argv){
                 break;
             }
             reduced_n=reduced_blocks;
-            reduced_blocks=(reduced_n-1+threads_per_block)/threads_per_block;
+            reduced_blocks=computeNumBlocks(reduced_n,threads_per_block);
 
         }
     }
