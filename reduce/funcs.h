@@ -14,10 +14,10 @@ template <> inline __device__ __host__ const char* fmt<unsigned long>() { return
 
 template <typename T> __device__ __host__ const char* fmtKernelInProgressMsg();
 template <> inline __device__ __host__ const char* fmtKernelInProgressMsg<int>() {
-    return  "tid %d lev %d block %d stride %d (%d-th val + %d-th val): (%d + %d)\n";
+    return  "tid %d block %d stride %d (%d-th val + %d-th val): (%d + %d)\n";
 }
 template <> inline __device__ __host__ const char* fmtKernelInProgressMsg<unsigned long>() {
-    return  "tid %d lev %d block %d stride %d (%lu-th val + %lu-th val): (%lu + %lu)\n";
+    return  "tid %d block %d stride %d (%lu-th val + %lu-th val): (%lu + %lu)\n";
 }
 template <typename T> __device__ __host__ const char* fmtKernelDefragMsg();
 template <> inline __device__ __host__ const char* fmtKernelDefragMsg<int>() {
