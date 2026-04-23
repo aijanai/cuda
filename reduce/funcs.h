@@ -14,10 +14,10 @@ template <> inline __device__ __host__ const char* fmt<unsigned long>() { return
 
 template <typename T> __device__ __host__ const char* fmtKernelInProgressMsg();
 template <> inline __device__ __host__ const char* fmtKernelInProgressMsg<int>() {
-    return  "tid %d block %d stride %d (%d-th val + %d-th val): (%d + %d)\n";
+    return  "tid %d block %d stride %d (shared %d-th val + input %d-th val): (%d + %d)\n";
 }
 template <> inline __device__ __host__ const char* fmtKernelInProgressMsg<unsigned long>() {
-    return  "tid %d block %d stride %d (%d-th val + %d-th val): (%lu + %lu)\n";
+    return  "tid %d block %d stride %d (shared %d-th val + input %d-th val): (%lu + %lu)\n";
 }
 
 template <typename T> __device__ __host__ const char* fmtKernelInProgressSkipMsg();
@@ -28,12 +28,20 @@ template <> inline __device__ __host__ const char* fmtKernelInProgressSkipMsg<un
     return  "skip tid %d block %d stride %d (%d-th val + %d-th val)\n";
 }
 
-template <typename T> __device__ __host__ const char* fmtKernelDefragMsg();
-template <> inline __device__ __host__ const char* fmtKernelDefragMsg<int>() {
-    return "tid %d block %d (%d-th val <- %d-th): %d\n";
+template <typename T> __device__ __host__ const char* fmtKernelDefragFinalMsg();
+template <> inline __device__ __host__ const char* fmtKernelDefragFinalMsg<int>() {
+    return "tid %d block %d (input %d-th val <- shared %d-th): %d\n";
 }
-template <> inline __device__ __host__ const char* fmtKernelDefragMsg<unsigned long>() {
-    return "tid %d block %d (%d-th val <- %d-th): %lu\n";
+template <> inline __device__ __host__ const char* fmtKernelDefragFinalMsg<unsigned long>() {
+    return "tid %d block %d (input %d-th val <- shared %d-th): %lu\n";
+}
+
+template <typename T> __device__ __host__ const char* fmtKernelPopulateSharedMsg();
+template <> inline __device__ __host__ const char* fmtKernelPopulateSharedMsg<int>() {
+    return "tid %d block %d (shared %d-th val <- input %d-th): %d\n";
+}
+template <> inline __device__ __host__ const char* fmtKernelPopulateSharedMsg<unsigned long>() {
+    return "tid %d block %d (shared %d-th val <- input %d-th): %lu\n";
 }
 
 template<typename T>

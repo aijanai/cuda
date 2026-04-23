@@ -116,7 +116,7 @@ int main(int argc, char** argv){
         }
         #endif
 
-        printf("running over length %d over %d blocks\n", reduced_n, reduced_blocks);
+        printf("running over length %d with %d blocks\n", reduced_n, reduced_blocks);
 
         // exec kernel N
         reduce<unsigned long, 256><<<reduced_blocks, threads_per_block>>>(ga, reduced_n);
