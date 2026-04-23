@@ -3,8 +3,14 @@
 #include "funcs.h"
 #include "kernel.cuh"
 
-unsigned long computeNumBlocks(unsigned long n, unsigned int threads_per_block){
-    return (n+threads_per_block-1)/threads_per_block;
+unsigned long computeSize(unsigned long n, unsigned int threads_per_block, int ratio=1){
+    return (n+ratio*threads_per_block-1)/(ratio*threads_per_block);
+}
+unsigned long computeNumBlocks(unsigned long n, unsigned int threads_per_block, int ratio=1){
+    return computeSize(n, threads_per_block,ratio);
+}
+int computeBlocksize(unsigned long n, unsigned int blocks){
+    return computeSize(n,blocks,1);
 }
 
 int main(int argc, char** argv){
@@ -14,10 +20,12 @@ int main(int argc, char** argv){
         return -2;
     }
     unsigned long n=atol(argv[1]); // n
-    unsigned int threads_per_block=atoi(argv[2]); // blocksize
-    unsigned long blocks=computeNumBlocks(n,threads_per_block); //grisize
+    int threads_per_block=atoi(argv[2]);
 
-    printf("array len is %lu, block size is %d, grid size is %lu\n", n, threads_per_block, blocks);
+    unsigned long blocks=computeNumBlocks(n,threads_per_block,2); //grisize, 2 elements/thread
+    int blocksize=computeBlocksize(n,blocks); //blocksize, how many threads per block
+
+    printf("array len is %lu, block size (threads/block) is %d, %d elements/block -> grid size is %lu\n", n, threads_per_block,blocksize, blocks);
 
     size_t SIZE=n*sizeof(unsigned long);
 
@@ -78,49 +86,55 @@ int main(int argc, char** argv){
 
     int reduced_n=n;
     int reduced_blocks=blocks;
-    if(blocks>1){
-        while(true){
-            // kernel N
-            printf("\n");
-            #ifdef DEBUG
-            if(DEBUG>0){
-                // copy partials
-                err=cudaMemcpy(c, ga, reduced_n*sizeof(unsigned long), cudaMemcpyDeviceToHost);
-                if (err != cudaSuccess){
-                    printf("CUDA error: gc memcpy %s\n", cudaGetErrorString(err));
-                    return -1;
-                }
+    
+    #ifdef DEBUG
+    bool first_run=true;
+    #endif
 
-                if(DEBUG>1){
-                    printf("partial sums:\n");
-                    printArray<unsigned long>(c,n);
-                }
-            }
-            #endif
-            
-            #ifdef DEBUG
-            if(DEBUG>0){
-                printf("sum of first %d nums: %lu\n",reduced_n,sumArrayLinear<unsigned long>(c,reduced_n));
-            }
-            #endif
-
-            printf("re-running over reduced length %d with reduced blocks: %d\n", reduced_n, reduced_blocks);
- 
-            // exec kernel N
-            reduce<unsigned long, 256><<<reduced_blocks, threads_per_block>>>(ga, reduced_n);
-
-            err = cudaDeviceSynchronize();
+    while(true){
+        // kernel N
+        printf("\n");
+        #ifdef DEBUG
+        if(DEBUG>0){
+            // copy partials
+            err=cudaMemcpy(c, ga, reduced_n*sizeof(unsigned long), cudaMemcpyDeviceToHost);
             if (err != cudaSuccess){
-                printf("CUDA error: dev sync %s\n", cudaGetErrorString(err));
+                printf("CUDA error: gc memcpy %s\n", cudaGetErrorString(err));
                 return -1;
             }
-            if(reduced_blocks==1){
-                break;
-            }
-            reduced_n=reduced_blocks;
-            reduced_blocks=computeNumBlocks(reduced_n,threads_per_block);
 
+            if(DEBUG>1 && !first_run){
+                printf("partial sums:\n");
+                printArray<unsigned long>(c,n);
+            }
         }
+        #endif
+        
+        #ifdef DEBUG
+        if(DEBUG>0){
+            printf("sum of first %d nums: %lu\n",reduced_n,sumArrayLinear<unsigned long>(c,reduced_n));
+        }
+        #endif
+
+        printf("running over length %d over %d blocks\n", reduced_n, reduced_blocks);
+
+        // exec kernel N
+        reduce<unsigned long, 256><<<reduced_blocks, threads_per_block>>>(ga, reduced_n);
+
+        err = cudaDeviceSynchronize();
+        if (err != cudaSuccess){
+            printf("CUDA error: dev sync %s\n", cudaGetErrorString(err));
+            return -1;
+        }
+        if(reduced_blocks==1){
+            break;
+        }
+        reduced_n=reduced_blocks;
+        reduced_blocks=computeNumBlocks(reduced_n,threads_per_block);
+
+        #ifdef DEBUG
+        first_run=false;
+        #endif
     }
 
     // wait for finish
