@@ -38,8 +38,8 @@ __global__ void reduce(T* input, T n){
     }
     #endif
 
-    for(int stride=1; stride<blockDim.x; stride*=2){
-        if(tid+stride<n && (tid % (2*stride)) == 0){
+    for(int stride=blockDim.x>>1; stride>0; stride>>=1){
+        if(tid<stride){
             #ifdef DEBUG
             if(DEBUG>2){
                 printf(fmtKernelInProgressMsg<T>(),tid,blockIdx.x, stride, tid, tid+stride, shared[tid], shared[tid+stride] );
