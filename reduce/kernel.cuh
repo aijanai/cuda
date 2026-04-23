@@ -1,10 +1,23 @@
 #include "funcs.h"
 
+
+template<typename T>
+__device__ void unroll(volatile T* data, int tid){
+    data[tid]+=data[tid+32];
+    data[tid]+=data[tid+16];
+    data[tid]+=data[tid+8];
+    data[tid]+=data[tid+4];
+    data[tid]+=data[tid+2];
+    data[tid]+=data[tid+1];
+}
+
 template<typename T, unsigned int blocksize>
 __global__ void reduce(T* input, T n){
     __shared__ T shared[blocksize];
     int tid=threadIdx.x;
     int i=tid+blockIdx.x*2*blockDim.x;
+
+    // populate shared memory
     #ifdef DEBUG
     if(DEBUG>2){
         printf(fmtKernelPopulateSharedMsg<T>(),tid, blockIdx.x, tid, i, input[i]);
@@ -38,7 +51,8 @@ __global__ void reduce(T* input, T n){
     }
     #endif
 
-    for(int stride=blockDim.x>>1; stride>0; stride>>=1){
+    // reduce iteratively within same block
+    for(int stride=blockDim.x>>1; stride>32; stride>>=1){
         if(tid<stride){
             #ifdef DEBUG
             if(DEBUG>2){
@@ -50,6 +64,12 @@ __global__ void reduce(T* input, T n){
         __syncthreads();
     }
 
+    // shortcut for last iterations
+    if(tid<32){
+        unroll(shared,tid);
+    }
+
+    // write back to central memory the reduced value
     if(tid ==0){
         #ifdef DEBUG
         if(DEBUG>2){

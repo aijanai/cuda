@@ -1,5 +1,5 @@
 CC=nvcc
-OPTS=-arch=native -ccbin=clang++ -Xcompiler -Wall #-DDEBUG=3 #-g -G
+OPTS=-arch=native -ccbin=clang++ -Xcompiler -Wall #-DDEBUG=1 #-g -G
 
 TARGETS= reduce
 
