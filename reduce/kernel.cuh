@@ -16,14 +16,16 @@ __global__ void reduce(T* input, T n){
     __shared__ T shared[blocksize];
     int tid=threadIdx.x;
     int i=tid+blockIdx.x*2*blockDim.x;
+    // initialize warp local sum
+    T sum=0;
 
-    // populate shared memory
+    // populate local memory from central
     #ifdef DEBUG
     if(DEBUG>2){
         printf(fmtKernelPopulateSharedMsg<T>(),tid, blockIdx.x, tid, i, input[i]);
     }
     #endif
-    shared[tid]= (i<n) ? input[i] : 0;
+    sum=(i<n) ? input[i] : 0;
 
     if(i+blockDim.x<n){
         #ifdef DEBUG
@@ -31,7 +33,7 @@ __global__ void reduce(T* input, T n){
             printf(fmtKernelInProgressMsg<T>(),tid,blockIdx.x, blockDim.x, tid, i+blockDim.x, shared[tid], input[i+blockDim.x] );
         }
         #endif
-        shared[tid]+=input[i+blockDim.x];
+        sum+=input[i+blockDim.x];
     }else{
         #ifdef DEBUG
         if(DEBUG>2){
@@ -51,24 +53,28 @@ __global__ void reduce(T* input, T n){
     }
     #endif
 
-    // reduce iteratively within same block
-    for(int stride=blockDim.x>>1; stride>32; stride>>=1){
-        if(tid<stride){
-            #ifdef DEBUG
-            if(DEBUG>2){
-                printf(fmtKernelInProgressMsg<T>(),tid,blockIdx.x, stride, tid, tid+stride, shared[tid], shared[tid+stride] );
-            }
-            #endif
-            shared[tid]+=shared[tid+stride];
+
+    // at this stage 512 elements have been summed to first 256 threads
+    // now, for each warp (32 threads), sum together members of warp
+    for(int stride=warpSize>>1; stride >0; stride>>=1){
+        sum+=__shfl_down_sync(0xffffffff,sum,stride);
+    }
+
+    // now all values are scattered in an array at position multiples of warpsize, because the reduction happened within warps
+    // the positions are within [0,... block/warpsize], so for 256 threads these have all been moved to [0..8]
+    if(tid % warpSize ==0){
+        shared[tid/warpSize]=sum;
+    }
+    __syncthreads();
+    
+    // reduce leftovers [0,... block/warpsize]
+    if(tid<warpSize){
+        sum=(tid<(blockDim.x/warpSize))? shared[tid]: 0;
+        for(int stride=warpSize>>1; stride >0; stride>>=1){
+            sum+=__shfl_down_sync(0xffffffff,sum,stride);
         }
-        __syncthreads();
     }
-
-    // shortcut for last iterations
-    if(tid<32){
-        unroll(shared,tid);
-    }
-
+    
     // write back to central memory the reduced value
     if(tid ==0){
         #ifdef DEBUG
@@ -76,6 +82,6 @@ __global__ void reduce(T* input, T n){
             printf(fmtKernelDefragFinalMsg<T>(),tid, blockIdx.x, blockIdx.x, 0, shared[0]);
         }
         #endif
-        input[blockIdx.x]=shared[0];
+        input[blockIdx.x]=sum;
     }
 }
