@@ -30,7 +30,7 @@ __global__ void reduce(T* input, T n){
     if(i+blockDim.x<n){
         #ifdef DEBUG
         if(DEBUG>2){
-            printf(fmtKernelInProgressMsg<T>(),tid,blockIdx.x, blockDim.x, tid, i+blockDim.x, shared[tid], input[i+blockDim.x] );
+            printf(fmtKernelInProgressMsg<T>(),tid,blockIdx.x, blockDim.x, tid, i+blockDim.x, sum, input[i+blockDim.x] );
         }
         #endif
         sum+=input[i+blockDim.x];
