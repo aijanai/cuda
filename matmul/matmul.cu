@@ -15,6 +15,7 @@ int main(int argc, char** argv){
     auto* a = initializeMatrix<int>(n,n);
     auto* b = initializeMatrix<int>(n,n);
     auto* c = initializeMatrix<int>(n,n);
+    auto* d = initializeMatrix<int>(n,n);
 
     int *ga, *gb, *gc;
 
@@ -33,7 +34,7 @@ int main(int argc, char** argv){
     //b=initializeIdentity<int>(n);
 
     #ifdef DEBUG
-    if(DEBUG>1){
+    if(DEBUG>2){
         printf("a:\n");
         printMatrix(a,n,n);
         printf("b:\n");
@@ -44,15 +45,27 @@ int main(int argc, char** argv){
     cudaMemcpy(ga,a,SIZE,cudaMemcpyHostToDevice);
     cudaMemcpy(gb,b,SIZE,cudaMemcpyHostToDevice);
 
-    //matmulnaive<<<numblocks,blocksize>>>(ga,gb,gc,n);
+    int tile_size=16;
+    dim3 blocksize(tile_size,tile_size);
+    dim3 grid_size((n+tile_size-1)/tile_size, (n+tile_size-1)/tile_size);
 
-
+    matmulnaive<<<grid_size,blocksize>>>(ga,gb,gc,n);
 
     cudaMemcpy(c,gc,SIZE,cudaMemcpyDeviceToHost);
 
-    cpu_matmul(a,b,c,n);
+    cpu_matmul(a,b,d,n);
 
-    printMatrix(c,n,n);
+    printf("sum of a elements: %d\n",sumMatrix<int>(a,n,n));
+    printf("sum of b elements: %d\n",sumMatrix<int>(b,n,n));
+    printf("sum of c elements: %d\n",sumMatrix<int>(c,n,n));
+    printf("sum of d elements: %d\n",sumMatrix<int>(d,n,n));
+    assert(compareMatricesLinear<int>(c,d,n*n));
+
+    #ifdef DEBUG
+    if(DEBUG>2){
+        printMatrix(c,n,n);
+    }
+    #endif
 
     delete[] a;
     delete[] b;

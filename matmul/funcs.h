@@ -128,6 +128,17 @@ __host__ __device__ void printMatrix(T* a, int n, int m){
 }
 
 template<typename T>
+__host__ __device__ T sumMatrix(T* a, int n, int m){
+    T sum=0;
+    for(int i=0; i<n; i++){
+        for(int j=0; j<m; j++){
+            sum+=a[i*n+j];
+        }
+    }
+    return sum;
+}
+
+template<typename T>
 __host__ __device__ void cpu_matmul(T* a, T* b, T* c, int n){
     for(int i=0; i<n; i++){
         for(int j=0; j<n; j++){
@@ -140,6 +151,29 @@ __host__ __device__ void cpu_matmul(T* a, T* b, T* c, int n){
     }
 
 }
+
+template<typename T>
+__host__ __device__ bool compareMatrices(T* a, T* b, int n, int m){
+    for(int i=0; i<n; i++){
+        for(int j=0; j<m; j++){
+            if (a[i*n+j] != b[i*n+j]){
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+template<typename T>
+__host__ __device__ bool compareMatricesLinear(T* a, T* b, int n){
+        for(int i=0; i<n; i++){
+            if (a[i] != b[i]){
+                return false;
+            }
+        }
+        return true;
+}
+
 
 template<typename T>
 T* initializeIdentity(int n) {
