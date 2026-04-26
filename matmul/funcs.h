@@ -127,9 +127,9 @@ __host__ __device__ void printMatrix(T* a, int n, int m){
     printf("\n");
 }
 
-template<typename T>
-__host__ __device__ T sumMatrix(T* a, int n, int m){
-    T sum=0;
+template<typename T, typename X>
+__host__ __device__ X sumMatrix(T* a, int n, int m){
+    X sum=0;
     for(int i=0; i<n; i++){
         for(int j=0; j<m; j++){
             sum+=a[i*n+j];
