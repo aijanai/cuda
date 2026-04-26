@@ -156,7 +156,7 @@ template<typename T>
 __host__ __device__ bool compareMatrices(T* a, T* b, int n, int m){
     for(int i=0; i<n; i++){
         for(int j=0; j<m; j++){
-            if (a[i*n+j] != b[i*n+j]){
+            if ((int)(a[i*n+j] - b[i*n+j])!=0){
                 return false;
             }
         }

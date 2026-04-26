@@ -2,6 +2,7 @@
 #include <cassert>
 #include "funcs.h"
 #include "kernel.cuh"
+#include <random>
 
 
 int main(int argc, char** argv){
@@ -12,6 +13,7 @@ int main(int argc, char** argv){
     }
 
     int n=atoi(argv[1]);
+    int tile_size=16;
     
     cudaEvent_t start, stop, kernel_start, kernel_stop, cpu_start, cpu_stop, memcpy_start, memcpy_stop, memcpyback_start, memcpyback_stop;
     cudaEventCreate(&start);
@@ -27,32 +29,33 @@ int main(int argc, char** argv){
 
     cudaEventRecord(start);
 
-    auto* a = initializeMatrix<int>(n,n);
-    auto* b = initializeMatrix<int>(n,n);
-    auto* c = initializeMatrix<int>(n,n);
+    auto* a = initializeMatrix<float>(n,n);
+    auto* b = initializeMatrix<float>(n,n);
+    auto* c = initializeMatrix<float>(n,n);
 
-    int *ga, *gb, *gc;
+    float *ga, *gb, *gc;
 
-    size_t SIZE=getByteSize<int>(n,n);
+    size_t SIZE=getByteSize<float>(n,n);
 
     cudaMalloc((void**) &ga, SIZE);
     cudaMalloc((void**) &gb, SIZE);
     cudaMalloc((void**) &gc, SIZE);
 
     for(int i=0; i<n*n; i++){
-        a[i]=1;
+        a[i]=(float)rand()/RAND_MAX;
         b[i]=a[i];
         c[i]=0;
     }
 
     //b=initializeIdentity<int>(n);
+    assert(compareMatrices<float>(a,b,n,n));
 
     #ifdef DEBUG
     if(DEBUG>2){
         printf("a:\n");
-        printMatrix(a,n,n);
+        printMatrix<float>(a,n,n);
         printf("b:\n");
-        printMatrix(b,n,n);
+        printMatrix<float>(b,n,n);
     }
     #endif
 
@@ -61,14 +64,14 @@ int main(int argc, char** argv){
     cudaMemcpy(gb,b,SIZE,cudaMemcpyHostToDevice);
     cudaEventRecord(memcpy_stop);
 
-    int tile_size=16;
     dim3 blocksize(tile_size,tile_size);
     dim3 grid_size((n+blocksize.x-1)/tile_size, (n+blocksize.y-1)/tile_size);
 
     printf("Blocksize (%d,%d), gridsize (%d,%d)\n", blocksize.x, blocksize.y, grid_size.x, grid_size.y);
     printf("Running kernel\n");
     cudaEventRecord(kernel_start);
-    matmulnaive<<<grid_size,blocksize>>>(ga,gb,gc,n);
+    matmulshared<float,16><<<grid_size,blocksize>>>(ga,gb,gc,n);
+    //matmulnaive<float><<<grid_size,blocksize>>>(ga,gb,gc,n);
     cudaEventRecord(kernel_stop);
 
     cudaError_t err;
@@ -81,17 +84,18 @@ int main(int argc, char** argv){
     cudaMemcpy(c,gc,SIZE,cudaMemcpyDeviceToHost);
     cudaEventRecord(memcpyback_stop);
 
-    printf("sum of a input elements: %lld\n",sumMatrix<int, long long>(a,n,n));
-    printf("sum of b input elements: %lld\n",sumMatrix<int, long long>(b,n,n));
-    printf("sum of c (GPU run) elements: %lld\n",sumMatrix<int, long long>(c,n,n));
+    printf("sum of a input elements: %lf\n",sumMatrix<float, double>(a,n,n));
+    printf("sum of b input elements: %lf\n",sumMatrix<float, double>(b,n,n));
+    printf("sum of c (GPU run) elements: %lf\n",sumMatrix<float, double>(c,n,n));
     
     cudaEventRecord(cpu_start);
     #ifdef DEBUG
-    if(DEBUG>2){
-        auto* d = initializeMatrix<int>(n,n);
+    if(DEBUG>1){
+        auto* d = initializeMatrix<float>(n,n);
         printf("Checking for CPU matmul\n");
         cpu_matmul(a,b,d,n);
-        printf("sum of d (CPU check) elements: %lld\n",sumMatrix<int, long long>(d,n,n));
+        printf("sum of d (CPU check) elements: %lf\n",sumMatrix<float, double>(d,n,n));
+        assert(compareMatrices<float>(c,d,n,n));
         delete[] d;
     }
     #endif
