@@ -64,13 +64,13 @@ int main(int argc, char** argv){
     cudaMemcpy(gb,b,SIZE,cudaMemcpyHostToDevice);
     cudaEventRecord(memcpy_stop);
 
-    dim3 blocksize(tile_size,tile_size);
+    dim3 blocksize(tile_size/4,tile_size);
     dim3 grid_size((n+blocksize.x-1)/tile_size, (n+blocksize.y-1)/tile_size);
 
     printf("Blocksize (%d,%d), gridsize (%d,%d)\n", blocksize.x, blocksize.y, grid_size.x, grid_size.y);
     printf("Running kernel\n");
     cudaEventRecord(kernel_start);
-    matmulshared<float,16><<<grid_size,blocksize>>>(ga,gb,gc,n);
+    matmulshared<float,float4,16><<<grid_size,blocksize>>>(ga,gb,gc,n);
     //matmulnaive<float><<<grid_size,blocksize>>>(ga,gb,gc,n);
     cudaEventRecord(kernel_stop);
 
