@@ -9,6 +9,7 @@ cuda/
 ├── hello/        # Basic kernel: block, thread, and warp identification
 ├── add/          # Vector addition with GPU/CPU comparison and profiling
 ├── reduce/       # Parallel reduction with templated kernel and CUDA event profiling
+├── matmul/       # Matrix multiplication: naive, shared memory, float4, and tensor core variants
 └── properties/   # Query and print GPU device properties
 ```
 
@@ -52,6 +53,25 @@ cd reduce && make
 ./reduce <array_len> <block_size>
 # e.g. ./reduce 1048576 256
 ```
+
+### matmul
+
+Square matrix multiplication (C = A × B) with four progressively optimized kernel implementations, all templated and driven from `matmul.cu`. Inputs are `half` (fp16), output is `float`.
+
+Kernels in `kernel.cuh`:
+- `matmulnaive` — one thread per output element, each thread walks the full row/column in a serial loop
+- `matmulshared` — tiled with shared memory; threads cooperatively load 16×16 tiles of A and B into `__shared__` before computing, reducing global memory traffic
+- `matmulvector` — tiled with shared memory and `float4` vectorized loads; each thread owns 4 consecutive output columns and performs a single 128-bit load per tile step
+- `matmultensor` — one warp per output tile using the WMMA API (`nvcuda::wmma`); loads `half` fragments, accumulates `mma_sync` products into a `float` accumulator, and stores with `store_matrix_sync`
+
+Helper templates in `funcs.h` cover matrix allocation, printing (with a user-supplied cast function for `half`→`float` display), element-wise comparison, CPU reference matmul, and `sumMatrix` for result validation.
+
+```bash
+cd matmul && make
+./matmul <n>        # e.g. ./matmul 512
+```
+
+Compile with `-DDEBUG=<level>` for progressively more verbose output (matrix dumps, CPU reference check).
 
 ### properties
 
