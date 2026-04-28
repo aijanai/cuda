@@ -1,5 +1,40 @@
 #include "funcs.h"
 
+using namespace nvcuda::wmma;
+
+template <typename T, typename O, int tile_size>
+__global__ void matmultensor(T* a, T* b, O* c, int n){
+    int warps_per_block=blockDim.x/32;
+    int warpid=int(threadIdx.x/32)+int(blockDim.x*blockIdx.x/32);
+
+    int tiles_per_dim=n/tile_size;
+    int numtiles=tiles_per_dim*tiles_per_dim;
+
+    if(warpid>=numtiles) return;
+
+    int tile_row=warpid/tiles_per_dim;
+    int tile_col=warpid % tiles_per_dim;
+
+    fragment<matrix_a, tile_size,tile_size,tile_size,T,row_major> a_fragment;
+    fragment<matrix_b, tile_size,tile_size,tile_size,T,row_major> b_fragment;
+    fragment<accumulator, tile_size,tile_size,tile_size,O> c_fragment;
+
+    fill_fragment(c_fragment,0);
+
+    for(int k=0; k<n; k+=tile_size){
+        T* a_block=&a[tile_row*tile_size*n + k];
+        T* b_block=&b[tile_col*tile_size+n*k];
+
+        load_matrix_sync(a_fragment,a_block,n);
+        load_matrix_sync(b_fragment,b_block,n);
+
+        mma_sync(c_fragment,a_fragment,b_fragment,c_fragment);
+    }
+
+    O* c_tile=&c[tile_row*tile_size*n + tile_col*tile_size];
+    store_matrix_sync(c_tile,c_fragment,n,mem_row_major);
+}
+
 template<typename T, typename M, int tile_size>
 __global__ void matmulvector(T* a, T* b, T* c, int n){
     __shared__ T shared_a[tile_size][tile_size];

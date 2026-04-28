@@ -4,6 +4,7 @@
 #include "kernel.cuh"
 #include <random>
 
+using namespace nvcuda::wmma;
 
 int main(int argc, char** argv){
 
@@ -29,48 +30,57 @@ int main(int argc, char** argv){
 
     cudaEventRecord(start);
 
-    auto* a = initializeMatrix<float>(n,n);
-    auto* b = initializeMatrix<float>(n,n);
+    auto* a = initializeMatrix<half>(n,n);
+    auto* b = initializeMatrix<half>(n,n);
     auto* c = initializeMatrix<float>(n,n);
 
-    float *ga, *gb, *gc;
+    half *ga, *gb;
+    float *gc;
 
+    size_t SIZE_half=getByteSize<half>(n,n);
     size_t SIZE=getByteSize<float>(n,n);
 
-    cudaMalloc((void**) &ga, SIZE);
-    cudaMalloc((void**) &gb, SIZE);
+    cudaMalloc((void**) &ga, SIZE_half);
+    cudaMalloc((void**) &gb, SIZE_half);
     cudaMalloc((void**) &gc, SIZE);
 
     for(int i=0; i<n*n; i++){
-        a[i]=(float)rand()/RAND_MAX;
+        a[i]=__float2half((float)rand()/RAND_MAX);
         b[i]=a[i];
         c[i]=0;
     }
 
     //b=initializeIdentity<int>(n);
-    assert(compareMatrices<float>(a,b,n,n));
+    assert(compareMatrices<half>(a,b,n,n));
 
     #ifdef DEBUG
     if(DEBUG>2){
         printf("a:\n");
-        printMatrix<float>(a,n,n);
+        printMatrix<half,float>(a,n,n,__half2float);
         printf("b:\n");
-        printMatrix<float>(b,n,n);
+        printMatrix<half,float>(b,n,n,__half2float);
     }
     #endif
 
     cudaEventRecord(memcpy_start);
-    cudaMemcpy(ga,a,SIZE,cudaMemcpyHostToDevice);
-    cudaMemcpy(gb,b,SIZE,cudaMemcpyHostToDevice);
+    cudaMemcpy(ga,a,SIZE_half,cudaMemcpyHostToDevice);
+    cudaMemcpy(gb,b,SIZE_half,cudaMemcpyHostToDevice);
     cudaEventRecord(memcpy_stop);
 
-    dim3 blocksize(tile_size/4,tile_size);
-    dim3 grid_size((n+blocksize.x-1)/tile_size, (n+blocksize.y-1)/tile_size);
+    int tiles_per_dim=n/tile_size;
+    int tiles=tiles_per_dim*tiles_per_dim;
+    printf("tiles per dim: %d\n", tiles_per_dim);
+    int warps_per_block=128/32;
+    int blocks=(tiles * warps_per_block -1)/warps_per_block;
+
+    dim3 blocksize(128);
+    dim3 grid_size(blocks);
 
     printf("Blocksize (%d,%d), gridsize (%d,%d)\n", blocksize.x, blocksize.y, grid_size.x, grid_size.y);
     printf("Running kernel\n");
     cudaEventRecord(kernel_start);
-    matmulvector<float,float4,16><<<grid_size,blocksize>>>(ga,gb,gc,n);
+    matmultensor<half,float,16><<<grid_size,blocksize>>>(ga,gb,gc,n);
+    //matmulvector<float,float4,16><<<grid_size,blocksize>>>(ga,gb,gc,n);
     //matmulnaive<float><<<grid_size,blocksize>>>(ga,gb,gc,n);
     cudaEventRecord(kernel_stop);
 
@@ -84,17 +94,17 @@ int main(int argc, char** argv){
     cudaMemcpy(c,gc,SIZE,cudaMemcpyDeviceToHost);
     cudaEventRecord(memcpyback_stop);
 
-    printf("sum of a input elements: %lf\n",sumMatrix<float, double>(a,n,n));
-    printf("sum of b input elements: %lf\n",sumMatrix<float, double>(b,n,n));
-    printf("sum of c (GPU run) elements: %lf\n",sumMatrix<float, double>(c,n,n));
+    printf("sum of a input elements: %lf\n",sumMatrix<half, float>(a,n,n,__half2float));
+    printf("sum of b input elements: %lf\n",sumMatrix<half, float>(b,n,n,__half2float));
+    printf("sum of c (GPU run) elements: %lf\n",sumMatrix<float, double>(c,n,n,convert<float,double>));
     
     cudaEventRecord(cpu_start);
     #ifdef DEBUG
     if(DEBUG>1){
         auto* d = initializeMatrix<float>(n,n);
         printf("Checking for CPU matmul\n");
-        cpu_matmul(a,b,d,n);
-        printf("sum of d (CPU check) elements: %lf\n",sumMatrix<float, double>(d,n,n));
+        cpu_matmul<half,float>(a,b,d,n,__half2float);
+        printf("sum of d (CPU check) elements: %lf\n",sumMatrix<float, double>(d,n,n,convert<float,double>));
         assert(compareMatrices<float>(c,d,n,n));
         delete[] d;
     }
@@ -103,7 +113,7 @@ int main(int argc, char** argv){
     
     #ifdef DEBUG
     if(DEBUG>2){
-        printMatrix(c,n,n);
+        printMatrix<float,float>(c,n,n, convert<float,float>);
     }
     #endif
 

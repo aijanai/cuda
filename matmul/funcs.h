@@ -4,6 +4,8 @@
 #include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
+#include <mma.h>
+
 #include <stdio.h>
 
 template <typename T> __device__ __host__ const char* fmt();
@@ -11,6 +13,7 @@ template <> inline __device__ __host__ const char* fmt<int>()           { return
 template <> inline __device__ __host__ const char* fmt<float>()         { return "%f "; }
 template <> inline __device__ __host__ const char* fmt<double>()        { return "%lf "; }
 template <> inline __device__ __host__ const char* fmt<unsigned long>() { return "%lu "; }
+template <> inline __device__ __host__ const char* fmt<half>()           { return "%f "; }
 
 /*
 template <typename T> __device__ __host__ const char* fmtKernelInProgressMsg();
@@ -116,35 +119,44 @@ T* initializeMatrix(int n, int m) {
     return a;
 }
 
-template<typename T>
-__host__ __device__ void printMatrix(T* a, int n, int m){
+template<typename T, typename O>
+__host__ __device__ void printMatrix(T* a, int n, int m, O(*caster)(T)){
     for(int i=0; i<n; i++){
         for(int j=0; j<m; j++){
-            printf(fmt<T>(), a[i*n+j]);
+            printf(fmt<O>(), caster(a[i*n+j]));
         }
         printf("\n");
     }
     printf("\n");
 }
 
-template<typename T, typename X>
-__host__ __device__ X sumMatrix(T* a, int n, int m){
-    X sum=0;
+template<typename T, typename O>
+__host__ __device__ O sumMatrix(T* a, int n, int m, O(*caster)(T)){
+    O sum=0;
     for(int i=0; i<n; i++){
         for(int j=0; j<m; j++){
-            sum+=a[i*n+j];
+            sum+=caster(a[i*n+j]);
         }
     }
     return sum;
 }
 
 template<typename T>
-__host__ __device__ void cpu_matmul(T* a, T* b, T* c, int n){
+__host__ __device__ T convert(T i){
+    return i;
+}
+template<typename T, typename O>
+__host__ __device__ O convert(T i){
+    return (O)i;
+}
+
+template<typename T, typename O>
+__host__ __device__ void cpu_matmul(T* a, T* b, O* c, int n, O(*caster)(T)){
     for(int i=0; i<n; i++){
         for(int j=0; j<n; j++){
-            T sum=0;
+            O sum=0;
             for(int k=0; k<n; k++){
-                sum+=a[i*n+k]*b[k*n+j];
+                sum+=caster(a[i*n+k])*caster(b[k*n+j]);
             }
             c[i*n+j]=sum;
         }
