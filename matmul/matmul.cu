@@ -70,7 +70,7 @@ int main(int argc, char** argv){
     printf("Blocksize (%d,%d), gridsize (%d,%d)\n", blocksize.x, blocksize.y, grid_size.x, grid_size.y);
     printf("Running kernel\n");
     cudaEventRecord(kernel_start);
-    matmulshared<float,float4,16><<<grid_size,blocksize>>>(ga,gb,gc,n);
+    matmulvector<float,float4,16><<<grid_size,blocksize>>>(ga,gb,gc,n);
     //matmulnaive<float><<<grid_size,blocksize>>>(ga,gb,gc,n);
     cudaEventRecord(kernel_stop);
 
