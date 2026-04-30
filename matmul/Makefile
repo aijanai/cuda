@@ -1,5 +1,5 @@
 CC=nvcc
-OPTS=-arch=native -ccbin=clang++ -Xcompiler -Wall -DDEBUG=2 #-g -G
+OPTS=-arch=native -ccbin=clang++ -Xcompiler -Wall,-Wno-unused-function -DDEBUG=2 #-g -G
 
 TARGETS= matmul
 
