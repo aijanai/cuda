@@ -16,4 +16,5 @@ kernel-preprocessed.cu: kernel.cuh
 	$(CC) -E kernel.cu -o $@
 	rm kernel.cu
 	grep -v ^# $@ > $@2
-	mv $@2 $@
+	cat -s $@2 > $@
+	rm $@2
